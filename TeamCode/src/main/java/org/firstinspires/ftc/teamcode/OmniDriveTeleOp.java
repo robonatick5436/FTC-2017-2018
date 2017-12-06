@@ -19,11 +19,12 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 public class OmniDriveTeleOp extends OpMode{
 
     private DcMotor leftWheelF, leftWheelB, rightWheelF, rightWheelB, linearSlide;
-    private Servo arm;
-    private CRServo harvesterL, harvesterR;
+    private Servo arm, harvesterL, harvesterR;
     private ColorSensor armColor;
     private GyroSensor gyro;
     private float leftX1,leftY1, rightX1, leftY2;
+    private float preDirection = 0, curDirection;
+    private double offset;
 
     private boolean forward () {
         if (leftY1 > 0.9) {
@@ -60,38 +61,68 @@ public class OmniDriveTeleOp extends OpMode{
         rightWheelB = hardwareMap.dcMotor.get("RWB");
         linearSlide = hardwareMap.dcMotor.get("LS");
 
-        harvesterL = hardwareMap.crservo.get("HL");
-        harvesterR = hardwareMap.crservo.get("HR");
+        harvesterL = hardwareMap.servo.get("HL");
+        harvesterR = hardwareMap.servo.get("HR");
         arm = hardwareMap.servo.get("arm");
 
         armColor = hardwareMap.colorSensor.get("AC");
         gyro = hardwareMap.gyroSensor.get("Gyro");
 
+        gyro.resetZAxisIntegrator();
+        gyro.calibrate();
+        while (gyro.isCalibrating()) {
+            telemetry.addData("Is Calibrating", gyro.isCalibrating());
+            telemetry.update();
+            //Thread.yield();
+        }
+
         rightWheelF.setDirection(DcMotorSimple.Direction.REVERSE);
         rightWheelB.setDirection(DcMotorSimple.Direction.REVERSE);
-        //harvesterR.setDirection(DcMotorSimple.Direction.REVERSE);
+        linearSlide.setDirection(DcMotorSimple.Direction.REVERSE);
     }
 
     @Override
     public void init_loop() {
+        harvesterL.setPosition(0.2);
+        harvesterR.setPosition(0.85);
+        arm.setPosition(1);
     }
 
     @Override
     public void loop() {
         leftX1 = gamepad1.left_stick_x;
-        leftY1 = gamepad1.left_stick_y;
+        leftY1 = -gamepad1.left_stick_y;
         rightX1 = gamepad1.right_stick_x;
-        leftY2 = gamepad2.left_stick_y;
+        leftY2 = -gamepad2.left_stick_y;
+
+        if (leftY1 == -0) {
+            leftY1 = 0;
+        }
+
+        curDirection = gyro.getHeading();
+        offset = OffsetCalculation.offset(curDirection, preDirection);
 
         linearSlide.setPower(leftY2);
-        harvesterL.setPower((gamepad1.left_trigger - gamepad2.right_trigger) * time);
-        harvesterR.setPower((gamepad1.left_trigger - gamepad2.right_trigger) * time);
-
-        if (rightX1 == 0) {
-            Restriction();
+        if (gamepad2.right_bumper) {
+            harvesterR.setPosition(1);
+            harvesterL.setPosition(0.1);
         } else {
-            Rotate();
+            harvesterR.setPosition(0.9);
+            harvesterL.setPosition(0.2);
         }
+
+        if (leftX1 == 0 && leftY1 == 0) {
+            Rotate();
+        } else {
+            Movement();
+        }
+
+        telemetry.addData("Offset", offset);
+        telemetry.addData("Desired Angle", OffsetCalculation.desiredAngle(leftX1, leftY1));
+        telemetry.addData("Current Heading", curDirection);
+        telemetry.addData("Previous Heading", preDirection);
+        telemetry.addData("Y", leftY1);
+        telemetry.update();
     }
 
     @Override
@@ -106,8 +137,8 @@ public class OmniDriveTeleOp extends OpMode{
     private void Movement () {
         leftWheelF.setPower(leftY1 + leftX1);
         leftWheelB.setPower(leftY1 - leftX1);
-        rightWheelF.setPower(leftY1 + leftX1);
-        rightWheelB.setPower(leftY1 - leftX1);
+        rightWheelF.setPower(leftY1 - leftX1);
+        rightWheelB.setPower(leftY1 + leftX1);
     }
 
     private void MoveF (double power) {
@@ -125,10 +156,12 @@ public class OmniDriveTeleOp extends OpMode{
     }
 
     private void Rotate () {
-        leftWheelF.setPower(rightX1);
-        leftWheelB.setPower(rightX1);
-        rightWheelF.setPower(-rightX1);
-        rightWheelB.setPower(-rightX1);
+        double power = gamepad1.right_trigger - gamepad1.left_trigger;
+        leftWheelF.setPower(power);
+        leftWheelB.setPower(power);
+        rightWheelF.setPower(-power);
+        rightWheelB.setPower(-power);
+        preDirection = gyro.getHeading();
     }
 
     private void Restriction () {
