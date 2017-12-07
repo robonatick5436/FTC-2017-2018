@@ -12,4 +12,10 @@ public class OffsetCalculation {
     static double desiredAngle (float x, float y) {
         return Math.atan2(x, y);
     }
+
+    static double DegRad (float degree) {
+	return degree * Math.PI / 180;
+    }
+
+    
 }
