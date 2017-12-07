@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.hardware.GyroSensor;
 import com.qualcomm.robotcore.hardware.Gyroscope;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.Range;
 
 /**
  * Created by GCW on 10/10/2017.
@@ -95,9 +96,9 @@ public class OmniDriveTeleOp extends OpMode{
         rightX1 = gamepad1.right_stick_x;
         leftY2 = -gamepad2.left_stick_y;
 
-        if (leftY1 == -0) {
-            leftY1 = 0;
-        }
+        //if (leftY1 == -0) {
+        //    leftY1 = 0;
+        //}
 
         curDirection = gyro.getHeading();
         offset = OffsetCalculation.offset(curDirection, preDirection);
@@ -111,17 +112,15 @@ public class OmniDriveTeleOp extends OpMode{
             harvesterL.setPosition(0.2);
         }
 
-        if (leftX1 == 0 && leftY1 == 0) {
-            Rotate();
-        } else {
-            Movement();
-        }
+        Movement();
+        //MoveF(leftY1);
 
         telemetry.addData("Offset", offset);
         telemetry.addData("Desired Angle", OffsetCalculation.desiredAngle(leftX1, leftY1));
         telemetry.addData("Current Heading", curDirection);
         telemetry.addData("Previous Heading", preDirection);
         telemetry.addData("Y", leftY1);
+        telemetry.addData("X", leftX1);
         telemetry.update();
     }
 
@@ -135,10 +134,11 @@ public class OmniDriveTeleOp extends OpMode{
     }
 
     private void Movement () {
-        leftWheelF.setPower(leftY1 + leftX1);
-        leftWheelB.setPower(leftY1 - leftX1);
-        rightWheelF.setPower(leftY1 - leftX1);
-        rightWheelB.setPower(leftY1 + leftX1);
+        double z = OffsetCalculation.GamePad1Trigger(gamepad1.left_trigger, gamepad1.right_trigger, gamepad1.right_bumper);
+        rightWheelF.setPower(OffsetCalculation.scaled(leftY1 + leftX1 - z));
+        leftWheelF.setPower(OffsetCalculation.scaled(leftY1 - leftX1 + z));
+        rightWheelB.setPower(OffsetCalculation.scaled(-leftY1 - leftX1 - z));
+        leftWheelB.setPower(OffsetCalculation.scaled(-leftY1 + leftX1 + z));
     }
 
     private void MoveF (double power) {

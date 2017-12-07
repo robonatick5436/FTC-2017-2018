@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.qualcomm.robotcore.util.Range;
+
 /**
  * Created by GCW on 12/5/2017.
  */
@@ -17,5 +19,13 @@ public class OffsetCalculation {
 	return degree * Math.PI / 180;
     }
 
-    
+    static double GamePad1Trigger (float left, float right, boolean slow) {
+        if (slow) {
+            return left - right;
+        } else {
+            return (left - right) / 4;
+        }
+    }
+
+    static double scaled (double input) { return Range.clip(input, -1, 1); }
 }
