@@ -19,11 +19,11 @@ public class OffsetCalculation {
 	return degree * Math.PI / 180;
     }
 
-    static double GamePad1Trigger (float left, float right, boolean slow) {
-        if (slow) {
+    static double GamePad1Trigger (float left, float right, boolean fast) {
+        if (fast) {
             return left - right;
         } else {
-            return (left - right) / 4;
+            return (left - right) / 8;
         }
     }
 
