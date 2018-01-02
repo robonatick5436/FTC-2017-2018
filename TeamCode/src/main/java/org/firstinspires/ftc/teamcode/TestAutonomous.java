@@ -28,7 +28,6 @@ public class TestAutonomous extends LinearOpMode {
     private GyroSensor gyro;
     private ModernRoboticsI2cRangeSensor disSensor;
     private float preDirection = 0, curDirection;
-    private float dis;
     private double offset;
     private double rotationPower;
 
@@ -53,35 +52,28 @@ public class TestAutonomous extends LinearOpMode {
 
         gyro = hardwareMap.gyroSensor.get("Gyro");
         disSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "ds");
+        disSensor.setI2cAddress(I2cAddr.create8bit(0x90));
         armColor = hardwareMap.colorSensor.get("AC");
         armColor.setI2cAddress(I2cAddr.create8bit(0x4c));
 
-        gyro.resetZAxisIntegrator();
         gyro.calibrate();
         while (gyro.isCalibrating()) {
             telemetry.addData("Is Calibrating", gyro.isCalibrating());
             telemetry.update();
         }
-        if (!gyro.isCalibrating()) {
-            telemetry.addData("Calibration done", "true");
-            telemetry.update();
-        }
+        gyro.resetZAxisIntegrator();
+        telemetry.addData("Calibration done", "true");
+        telemetry.update();
 
         rightWheelF.setDirection(DcMotorSimple.Direction.REVERSE);
         rightWheelB.setDirection(DcMotorSimple.Direction.REVERSE);
 
         waitForStart();
 
-        Turn(45, 0.5);
+        Move(10, 1, 0);
 
-//        while (opModeIsActive()) {
-//            curDirection = gyro.getHeading();
-//            offset = OffsetCalculation.offset(curDirection, preDirection) * 5;
-//            telemetry.addData("Offset", offset);
-//            telemetry.addData("Heading", curDirection);
-//            telemetry.update();
-//        }
-//
+        //Turn(45, 0.2);
+
 //        harvesterL.setPosition(0.2);
 //        harvesterR.setPosition(0.85);
 //        arm.setPosition(0.35);
@@ -107,11 +99,18 @@ public class TestAutonomous extends LinearOpMode {
 //        }
     }
 
-    private void MoveF (double power) {
-        rightWheelF.setPower(OffsetCalculation.scaled(power + offset));
-        leftWheelF.setPower(OffsetCalculation.scaled(power - offset));
-        rightWheelB.setPower(OffsetCalculation.scaled(-power - offset));
-        leftWheelB.setPower(OffsetCalculation.scaled(-power + offset));
+    private void MoveF (double power, double error) {
+        rightWheelF.setPower(OffsetCalculation.scaled(power + error));
+        leftWheelF.setPower(OffsetCalculation.scaled(power - error));
+        rightWheelB.setPower(OffsetCalculation.scaled(-power + error));
+        leftWheelB.setPower(OffsetCalculation.scaled(-power - error));
+    }
+
+    private void Stop () {
+        leftWheelF.setPower(0);
+        rightWheelF.setPower(0);
+        leftWheelB.setPower(0);
+        rightWheelB.setPower(0);
     }
 
     private void Rotate (double power) {
@@ -121,36 +120,52 @@ public class TestAutonomous extends LinearOpMode {
         rightWheelB.setPower(-power);
     }
 
-    private void Turn (int target, double power) {
-        int zAccumulated = 0;
-        telemetry.addData("first stage", "true");
-        telemetry.update();
-        while (Math.abs(zAccumulated - target) > 1) {
-            telemetry.addData("second stage", "true");
+    private void Move (int target, double power, int desiredDirect) {
+        int distance = disSensor.rawUltrasonic();
+        while (Math.abs(distance - target) > 1) {
+            distance = disSensor.rawUltrasonic();
+            telemetry.addData("distance", distance);
             telemetry.update();
+            double realPower;
+            curDirection = gyro.getHeading();
+            double offset = OffsetCalculation.offset(curDirection, desiredDirect) * 5;
+
+            if (distance < target * 2) {
+                realPower = power / 2;
+            } else {
+                realPower = power;
+            }
+            if (distance > target) {
+                MoveF(realPower, offset);
+            }
+            if (distance < target) {
+                MoveF(-realPower, offset);
+            }
+            Stop();
+        }
+    }
+
+    private void Turn (int target, double power) {
+        int zAccumulated = gyro.getHeading();
+        while (Math.abs(zAccumulated - target) > 1) {
             zAccumulated = gyro.getHeading();
-            double realPower = OffsetCalculation.scaled(power * (zAccumulated - target) / 10);
+            telemetry.addData("heading", zAccumulated);
+            telemetry.update();
             if (zAccumulated < target) {
-                telemetry.addData("third stage", "true");
-                telemetry.update();
-                leftWheelF.setPower(realPower);
-                rightWheelF.setPower(-realPower);
-                leftWheelB.setPower(realPower);
-                rightWheelB.setPower(-realPower);
+//                leftWheelF.setPower(power);
+//                rightWheelF.setPower(-power);
+//                leftWheelB.setPower(power);
+//                rightWheelB.setPower(-power);
+                Rotate(power);
             }
             if (zAccumulated > target) {
-                telemetry.addData("third stage", "true");
-                telemetry.update();
-                leftWheelF.setPower(-realPower);
-                rightWheelF.setPower(realPower);
-                leftWheelB.setPower(-realPower);
-                rightWheelB.setPower(realPower);
+//                leftWheelF.setPower(-power);
+//                rightWheelF.setPower(power);
+//                leftWheelB.setPower(-power);
+//                rightWheelB.setPower(power);
+                Rotate(-power);
             }
         }
-
-        leftWheelF.setPower(0);
-        rightWheelF.setPower(0);
-        leftWheelB.setPower(0);
-        rightWheelB.setPower(0);
+        Stop();
     }
 }
