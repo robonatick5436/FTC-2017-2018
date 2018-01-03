@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.GyroSensor;
 import com.qualcomm.robotcore.hardware.Gyroscope;
 import com.qualcomm.robotcore.hardware.I2cAddr;
@@ -103,7 +104,11 @@ public class OmniDriveTeleOp extends OpMode{
         }
 
         curDirection = gyro.getHeading();
-        offset = OffsetCalculation.offset(curDirection, preDirection) * 5;
+        offset = OffsetCalculation.offset(curDirection, preDirection);
+        if (gamepad1.left_trigger - gamepad1.right_trigger != 0 || gamepad1.a ) {
+            ResetDirection();
+            offset = 0;
+        }
 
         linearSlide.setPower(leftY2);
         if (gamepad2.right_bumper) {
@@ -124,15 +129,12 @@ public class OmniDriveTeleOp extends OpMode{
         }*/
 
         Movement();
-        if (gamepad1.left_trigger - gamepad1.right_trigger != 0) {
-            ResetDirection();
-        }
 
-        telemetry.addData("Offset", offset);
-        telemetry.addData("Desired Angle", OffsetCalculation.desiredAngle(leftX1, leftY1));
-        telemetry.addData("Red", armColor.red());
-        telemetry.addData("Blue", armColor.blue());
-        telemetry.update();
+//        telemetry.addData("Offset", offset);
+//        telemetry.addData("Desired Angle", OffsetCalculation.desiredAngle(leftX1, leftY1));
+//        telemetry.addData("Red", armColor.red());
+//        telemetry.addData("Blue", armColor.blue());
+//        telemetry.update();
     }
 
     @Override
@@ -145,11 +147,12 @@ public class OmniDriveTeleOp extends OpMode{
     }
 
     private void Movement () {
-        double z = OffsetCalculation.GamePad1Trigger(gamepad1.left_trigger, gamepad1.right_trigger, gamepad1.left_bumper);
-        rightWheelF.setPower(OffsetCalculation.scaled(leftY1 + leftX1 + offset - z));
-        leftWheelF.setPower(OffsetCalculation.scaled(leftY1 - leftX1 - offset + z));
-        rightWheelB.setPower(OffsetCalculation.scaled(-leftY1 - leftX1 - offset - z));
-        leftWheelB.setPower(OffsetCalculation.scaled(-leftY1 + leftX1 + offset + z));
+        double z = gamepad1.left_trigger - gamepad1.right_trigger;
+
+        rightWheelF.setPower(OffsetCalculation.scaled(leftY1 + leftX1 + offset + z));
+        leftWheelF.setPower(OffsetCalculation.scaled(leftY1 - leftX1 - offset - z));
+        rightWheelB.setPower(OffsetCalculation.scaled(-leftY1 - leftX1 + offset + z));
+        leftWheelB.setPower(OffsetCalculation.scaled(-leftY1 + leftX1 - offset - z));
     }
 
     private void MoveF (double power) {
