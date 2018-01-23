@@ -20,15 +20,17 @@ import com.qualcomm.robotcore.util.Range;
 /**
  * Created by GCW on 12/14/2017.
  */
-@Autonomous(name="Test Autonomous", group = "Iterative Opmode")
-public class TestAutonomous extends LinearOpMode {
+@Autonomous(name="Blue Autonomous", group = "Iterative Opmode")
+public class BlueAutonomous extends LinearOpMode {
 
     private DcMotor leftWheelF, leftWheelB, rightWheelF, rightWheelB;
     private ColorSensor armColor;
     private Servo arm, harvesterL, harvesterR;
     private GyroSensor gyro;
     private ModernRoboticsI2cRangeSensor disSensor;
-
+    private float preDirection = 0, curDirection;
+    private double offset;
+    private double rotationPower;
 
     private boolean Red () {
         if (armColor.red() > armColor.blue()) {
@@ -50,19 +52,51 @@ public class TestAutonomous extends LinearOpMode {
         harvesterR = hardwareMap.servo.get("HR");
 
 //        gyro = hardwareMap.gyroSensor.get("Gyro");
-        disSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "ds");
-        disSensor.setI2cAddress(I2cAddr.create8bit(0x90));
+//        disSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "ds");
+//        disSensor.setI2cAddress(I2cAddr.create8bit(0x90));
         armColor = hardwareMap.colorSensor.get("AC");
         armColor.setI2cAddress(I2cAddr.create8bit(0x4c));
+        armColor.enableLed(true);
+
+//        gyro.calibrate();
+//        while (gyro.isCalibrating()) {
+//            telemetry.addData("Is Calibrating", gyro.isCalibrating());
+//            telemetry.update();
+//        }
+//        gyro.resetZAxisIntegrator();
+//        telemetry.addData("Calibration done", "true");
+//        telemetry.update();
 
         rightWheelF.setDirection(DcMotorSimple.Direction.REVERSE);
         rightWheelB.setDirection(DcMotorSimple.Direction.REVERSE);
 
         waitForStart();
 
-        MoveF(1, 0);
+        harvesterL.setPosition(0.2);
+        harvesterR.setPosition(0.85);
+        arm.setPosition(0.35);
         sleep(1000);
-        Stop();
+        telemetry.addData("Is Red : ", Red());
+        telemetry.addData("Red", armColor.red());
+        telemetry.addData("Blue", armColor.blue());
+        telemetry.update();
+        if (armColor.red() > armColor.blue()) {
+            MoveF(-0.4, 0);
+            sleep(300);
+            arm.setPosition(1);
+            sleep(400);
+            MoveF(-1, 0);
+            sleep(600);
+        } else {
+            MoveF(0.2, 0);
+            sleep(300);
+            Stop();
+            sleep(500);
+            arm.setPosition(1);
+            sleep(400);
+            MoveF(-0.4, 0);
+            sleep(2000);
+        }
     }
 
     private void MoveF (double power, double error) {
@@ -93,6 +127,8 @@ public class TestAutonomous extends LinearOpMode {
             telemetry.addData("distance", distance);
             telemetry.update();
             double realPower;
+            curDirection = gyro.getHeading();
+            double offset = OffsetCalculation.offset(curDirection, desiredDirect) * 5;
 
             if (distance < target * 2) {
                 realPower = power / 2;
@@ -100,10 +136,10 @@ public class TestAutonomous extends LinearOpMode {
                 realPower = power;
             }
             if (distance > target) {
-                MoveF(realPower, 0);
+                MoveF(realPower, offset);
             }
             if (distance < target) {
-                MoveF(-realPower, 0);
+                MoveF(-realPower, offset);
             }
             Stop();
         }

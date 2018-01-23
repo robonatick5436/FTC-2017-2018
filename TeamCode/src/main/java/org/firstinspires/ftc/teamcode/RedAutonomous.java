@@ -4,7 +4,6 @@ import com.qualcomm.hardware.modernrobotics.ModernRoboticsI2cRangeSensor;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -18,17 +17,17 @@ import com.qualcomm.robotcore.hardware.UltrasonicSensor;
 import com.qualcomm.robotcore.util.Range;
 
 /**
- * Created by GCW on 12/14/2017.
+ * Created by GCW on 1/6/2018.
  */
-@Autonomous(name="Test Autonomous", group = "Iterative Opmode")
-public class TestAutonomous extends LinearOpMode {
+@Autonomous(name="Red Autonomous", group = "Iterative Opmode")
+public class RedAutonomous extends LinearOpMode {
 
     private DcMotor leftWheelF, leftWheelB, rightWheelF, rightWheelB;
     private ColorSensor armColor;
     private Servo arm, harvesterL, harvesterR;
     private GyroSensor gyro;
     private ModernRoboticsI2cRangeSensor disSensor;
-
+    private float preDirection = 0, curDirection;
 
     private boolean Red () {
         if (armColor.red() > armColor.blue()) {
@@ -49,7 +48,7 @@ public class TestAutonomous extends LinearOpMode {
         harvesterL = hardwareMap.servo.get("HL");
         harvesterR = hardwareMap.servo.get("HR");
 
-//        gyro = hardwareMap.gyroSensor.get("Gyro");
+        gyro = hardwareMap.gyroSensor.get("Gyro");
         disSensor = hardwareMap.get(ModernRoboticsI2cRangeSensor.class, "ds");
         disSensor.setI2cAddress(I2cAddr.create8bit(0x90));
         armColor = hardwareMap.colorSensor.get("AC");
@@ -60,9 +59,29 @@ public class TestAutonomous extends LinearOpMode {
 
         waitForStart();
 
-        MoveF(1, 0);
+        harvesterL.setPosition(0.2);
+        harvesterR.setPosition(0.85);
+        arm.setPosition(0.35);
         sleep(1000);
-        Stop();
+        telemetry.addData("Is Red : ", Red());
+        telemetry.update();
+        if (Red()) {
+            MoveF(-0.4, 0);
+            sleep(300);
+            arm.setPosition(1);
+            sleep(400);
+            MoveF(-1, 0);
+            sleep(600);
+        } else {
+            MoveF(0.2, 0);
+            sleep(300);
+            Stop();
+            sleep(500);
+            arm.setPosition(1);
+            sleep(400);
+            MoveF(-0.4, 0);
+            sleep(2000);
+        }
     }
 
     private void MoveF (double power, double error) {
@@ -90,9 +109,9 @@ public class TestAutonomous extends LinearOpMode {
         int distance = disSensor.rawUltrasonic();
         while (Math.abs(distance - target) > 1) {
             distance = disSensor.rawUltrasonic();
-            telemetry.addData("distance", distance);
-            telemetry.update();
+            curDirection = gyro.getHeading();
             double realPower;
+            double offset = OffsetCalculation.offset(curDirection, desiredDirect);
 
             if (distance < target * 2) {
                 realPower = power / 2;
@@ -100,10 +119,10 @@ public class TestAutonomous extends LinearOpMode {
                 realPower = power;
             }
             if (distance > target) {
-                MoveF(realPower, 0);
+                MoveF(realPower, offset);
             }
             if (distance < target) {
-                MoveF(-realPower, 0);
+                MoveF(-realPower, offset);
             }
             Stop();
         }
@@ -111,13 +130,6 @@ public class TestAutonomous extends LinearOpMode {
 
     private void Turn (int target, double power) {
         int zAccumulated = gyro.getHeading();
-        if (target > 180) {
-            Rotate(0.2);
-            sleep(400);
-        } else {
-            Rotate(-0.2);
-            sleep(400);
-        }
         while (Math.abs(zAccumulated - target) > 1) {
             zAccumulated = gyro.getHeading();
             telemetry.addData("heading", zAccumulated);

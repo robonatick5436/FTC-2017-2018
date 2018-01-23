@@ -22,12 +22,13 @@ import com.qualcomm.robotcore.util.Range;
 public class OmniDriveTeleOp extends OpMode{
 
     private DcMotor leftWheelF, leftWheelB, rightWheelF, rightWheelB, linearSlide;
-    private Servo arm, harvesterL, harvesterR;
+    private Servo arm, harvesterTL, harvesterTR, harvesterBL, harvesterBR;
     private ColorSensor armColor;
     private GyroSensor gyro;
     private float leftX1,leftY1, rightX1, rightY1, leftY2;
     private float preDirection = 0, curDirection;
     private double offset;
+    private boolean flipped;
 
     private boolean forward () {
         if (leftY1 > 0.9) {
@@ -64,8 +65,8 @@ public class OmniDriveTeleOp extends OpMode{
         rightWheelB = hardwareMap.dcMotor.get("RWB");
         linearSlide = hardwareMap.dcMotor.get("LS");
 
-        harvesterL = hardwareMap.servo.get("HL");
-        harvesterR = hardwareMap.servo.get("HR");
+        harvesterTL = hardwareMap.servo.get("TL");
+        harvesterTR = hardwareMap.servo.get("TR");
         arm = hardwareMap.servo.get("arm");
 
         armColor = hardwareMap.colorSensor.get("AC");
@@ -79,15 +80,19 @@ public class OmniDriveTeleOp extends OpMode{
             telemetry.update();
         }
 
+        armColor.enableLed(true);
         rightWheelF.setDirection(DcMotorSimple.Direction.REVERSE);
         rightWheelB.setDirection(DcMotorSimple.Direction.REVERSE);
-        linearSlide.setDirection(DcMotorSimple.Direction.REVERSE);
+        linearSlide.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        linearSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
 
     @Override
     public void init_loop() {
-        harvesterL.setPosition(0.35);
-        harvesterR.setPosition(0.7);
+        harvesterTL.setPosition(0.35);
+        harvesterBL.setPosition(0.35);
+        harvesterTR.setPosition(0.7);
+        harvesterBR.setPosition(0.7);
         arm.setPosition(1);
     }
 
@@ -105,28 +110,30 @@ public class OmniDriveTeleOp extends OpMode{
 
         curDirection = gyro.getHeading();
         offset = OffsetCalculation.offset(curDirection, preDirection);
-        if (gamepad1.left_trigger - gamepad1.right_trigger != 0 || gamepad1.a ) {
+        if (gamepad1.a) {
             ResetDirection();
             offset = 0;
         }
 
-        linearSlide.setPower(leftY2);
-        if (gamepad2.right_bumper) {
-            harvesterL.setPosition(0.25);
-            harvesterR.setPosition(0.85);
-        } else {
-            harvesterL.setPosition(0.35);
-            harvesterR.setPosition(0.70);
+        if (gamepad2.a) {
+            if (flipped) {
+                Flip(450, 0.5);
+            } else {
+                Flip(-450, 0.5);
+            }
         }
 
-        /*linearSlide.setPower(rightY1);
-        if (gamepad1.right_bumper) {
-            harvesterL.setPosition(0.25);
-            harvesterR.setPosition(0.85);
+        if (gamepad2.right_bumper) {
+            harvesterTL.setPosition(0.25);
+            harvesterBL.setPosition(0.25);
+            harvesterTR.setPosition(0.85);
+            harvesterBR.setPosition(0.85);
         } else {
-            harvesterL.setPosition(0.35);
-            harvesterR.setPosition(0.70);
-        }*/
+            harvesterTL.setPosition(0.35);
+            harvesterBL.setPosition(0.35);
+            harvesterTR.setPosition(0.70);
+            harvesterBR.setPosition(0.70);
+        }
 
         Movement();
 
@@ -147,7 +154,7 @@ public class OmniDriveTeleOp extends OpMode{
     }
 
     private void Movement () {
-        double z = gamepad1.left_trigger - gamepad1.right_trigger;
+        double z = rightX1;
 
         rightWheelF.setPower(OffsetCalculation.scaled(leftY1 + leftX1 + offset + z));
         leftWheelF.setPower(OffsetCalculation.scaled(leftY1 - leftX1 - offset - z));
@@ -173,13 +180,14 @@ public class OmniDriveTeleOp extends OpMode{
         preDirection = curDirection;
     }
 
-    private void Restriction () {
-        if (forward() || backward()) {
-            MoveF(leftY1);
-        }else if (left() || right()) {
-            MoveS(leftX1);
-        } else {
-            Movement();
+    private void Flip (int ticks, double power) {
+        int targetPos = linearSlide.getCurrentPosition() + ticks;
+        linearSlide.setTargetPosition(targetPos);
+        linearSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        linearSlide.setPower(power);
+        if (!linearSlide.isBusy()) {
+            linearSlide.setPower(0);
+            linearSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
     }
 }
