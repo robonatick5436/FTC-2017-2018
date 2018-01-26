@@ -21,41 +21,13 @@ import com.qualcomm.robotcore.util.Range;
 @TeleOp(name="Omni Driving Mode", group="Iterative Opmode")  // @Autonomous(...) is the other common choice
 public class OmniDriveTeleOp extends OpMode{
 
-    private DcMotor leftWheelF, leftWheelB, rightWheelF, rightWheelB, linearSlide;
+    private DcMotor leftWheelF, leftWheelB, rightWheelF, rightWheelB, linearSlide, rackMotor;
     private Servo arm, harvesterTL, harvesterTR, harvesterBL, harvesterBR;
     private ColorSensor armColor;
     private GyroSensor gyro;
     private float leftX1,leftY1, rightX1, rightY1, leftY2;
     private float preDirection = 0, curDirection;
     private double offset;
-    private boolean flipped;
-
-    private boolean forward () {
-        if (leftY1 > 0.9) {
-            return true;
-        } else {
-            return  false;
-        }
-    }
-    private boolean backward () {
-        if (leftY1 < -0.9) {
-            return true;
-        } else {
-            return  false;
-        }
-    }private boolean left () {
-        if (leftX1 < -0.9) {
-            return true;
-        } else {
-            return  false;
-        }
-    }private boolean right () {
-        if (leftX1 > 0.9) {
-            return true;
-        } else {
-            return  false;
-        }
-    }
 
     @Override
     public void init() {
@@ -64,9 +36,12 @@ public class OmniDriveTeleOp extends OpMode{
         rightWheelF = hardwareMap.dcMotor.get("RWF");
         rightWheelB = hardwareMap.dcMotor.get("RWB");
         linearSlide = hardwareMap.dcMotor.get("LS");
+        rackMotor = hardwareMap.dcMotor.get("RM");
 
         harvesterTL = hardwareMap.servo.get("TL");
         harvesterTR = hardwareMap.servo.get("TR");
+        harvesterBL = hardwareMap.servo.get("BL");
+        harvesterBR = hardwareMap.servo.get("BR");
         arm = hardwareMap.servo.get("arm");
 
         armColor = hardwareMap.colorSensor.get("AC");
@@ -89,10 +64,10 @@ public class OmniDriveTeleOp extends OpMode{
 
     @Override
     public void init_loop() {
-        harvesterTL.setPosition(0.35);
-        harvesterBL.setPosition(0.35);
-        harvesterTR.setPosition(0.7);
-        harvesterBR.setPosition(0.7);
+        harvesterTL.setPosition(0.5);
+        harvesterBL.setPosition(0.5);
+        harvesterTR.setPosition(0.5);
+        harvesterBR.setPosition(0.5);
         arm.setPosition(1);
     }
 
@@ -110,29 +85,24 @@ public class OmniDriveTeleOp extends OpMode{
 
         curDirection = gyro.getHeading();
         offset = OffsetCalculation.offset(curDirection, preDirection);
-        if (gamepad1.a) {
+        if (gamepad1.right_bumper) {
             ResetDirection();
             offset = 0;
         }
 
-        if (gamepad2.a) {
-            if (flipped) {
-                Flip(450, 0.5);
-            } else {
-                Flip(-450, 0.5);
-            }
-        }
+        linearSlide.setPower(leftY2);
+        rackMotor.setPower(-gamepad2.right_stick_y);
 
         if (gamepad2.right_bumper) {
-            harvesterTL.setPosition(0.25);
-            harvesterBL.setPosition(0.25);
-            harvesterTR.setPosition(0.85);
-            harvesterBR.setPosition(0.85);
+            harvesterTL.setPosition(0.4);
+            harvesterBL.setPosition(0.4);
+            harvesterTR.setPosition(0.4);
+            harvesterBR.setPosition(0.4);
         } else {
-            harvesterTL.setPosition(0.35);
-            harvesterBL.setPosition(0.35);
-            harvesterTR.setPosition(0.70);
-            harvesterBR.setPosition(0.70);
+            harvesterTL.setPosition(0.5);
+            harvesterBL.setPosition(0.5);
+            harvesterTR.setPosition(0.5);
+            harvesterBR.setPosition(0.5);
         }
 
         Movement();
@@ -141,6 +111,7 @@ public class OmniDriveTeleOp extends OpMode{
 //        telemetry.addData("Desired Angle", OffsetCalculation.desiredAngle(leftX1, leftY1));
 //        telemetry.addData("Red", armColor.red());
 //        telemetry.addData("Blue", armColor.blue());
+//        telemetry.addData("Position", linearSlide.getCurrentPosition());
 //        telemetry.update();
     }
 
@@ -180,14 +151,5 @@ public class OmniDriveTeleOp extends OpMode{
         preDirection = curDirection;
     }
 
-    private void Flip (int ticks, double power) {
-        int targetPos = linearSlide.getCurrentPosition() + ticks;
-        linearSlide.setTargetPosition(targetPos);
-        linearSlide.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        linearSlide.setPower(power);
-        if (!linearSlide.isBusy()) {
-            linearSlide.setPower(0);
-            linearSlide.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        }
-    }
+
 }
