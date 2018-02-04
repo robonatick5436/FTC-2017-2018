@@ -21,7 +21,7 @@ public class OffsetCalculation {
     }
 
     static double DegRad (float degree) {
-	return degree * Math.PI / 180;
+        return degree * Math.PI / 180;
     }
 
     static double GamePad1Trigger (float left, float right, boolean fast) {

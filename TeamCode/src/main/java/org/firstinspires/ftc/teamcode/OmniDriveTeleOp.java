@@ -64,11 +64,10 @@ public class OmniDriveTeleOp extends OpMode{
 
     @Override
     public void init_loop() {
-        harvesterTL.setPosition(0.5);
-        harvesterBL.setPosition(0.5);
-        harvesterTR.setPosition(0.5);
-        harvesterBR.setPosition(0.5);
-        arm.setPosition(1);
+        harvesterTL.setPosition(0.75);
+        harvesterTR.setPosition(0.25);
+        harvesterBL.setPosition(0.25);
+        harvesterBR.setPosition(0.75);
     }
 
     @Override
@@ -85,27 +84,17 @@ public class OmniDriveTeleOp extends OpMode{
 
         curDirection = gyro.getHeading();
         offset = OffsetCalculation.offset(curDirection, preDirection);
-        if (gamepad1.right_bumper) {
+        if (rightX1 != 0 || gamepad1.a) {
             ResetDirection();
             offset = 0;
         }
 
-        linearSlide.setPower(leftY2);
-        rackMotor.setPower(-gamepad2.right_stick_y);
+        linearSlide.setPower(leftY2 * 0.8);
+        rackMotor.setPower(gamepad2.right_stick_y);
 
-        if (gamepad2.right_bumper) {
-            harvesterTL.setPosition(0.4);
-            harvesterBL.setPosition(0.4);
-            harvesterTR.setPosition(0.4);
-            harvesterBR.setPosition(0.4);
-        } else {
-            harvesterTL.setPosition(0.5);
-            harvesterBL.setPosition(0.5);
-            harvesterTR.setPosition(0.5);
-            harvesterBR.setPosition(0.5);
-        }
+        Clamp();
 
-        Movement();
+        Movement(gamepad1.right_bumper);
 
 //        telemetry.addData("Offset", offset);
 //        telemetry.addData("Desired Angle", OffsetCalculation.desiredAngle(leftX1, leftY1));
@@ -124,13 +113,37 @@ public class OmniDriveTeleOp extends OpMode{
     public void stop() {
     }
 
-    private void Movement () {
-        double z = rightX1;
+    private void Movement (boolean slow) {
+        double z = rightX1 / 4;
+        double scaleFactor;
+        if (slow) {
+            scaleFactor = 0.5;
+        } else {
+            scaleFactor = 1;
+        }
 
-        rightWheelF.setPower(OffsetCalculation.scaled(leftY1 + leftX1 + offset + z));
-        leftWheelF.setPower(OffsetCalculation.scaled(leftY1 - leftX1 - offset - z));
-        rightWheelB.setPower(OffsetCalculation.scaled(-leftY1 - leftX1 + offset + z));
-        leftWheelB.setPower(OffsetCalculation.scaled(-leftY1 + leftX1 - offset - z));
+        rightWheelF.setPower(OffsetCalculation.scaled(leftY1 + leftX1 + offset + z) * scaleFactor);
+        leftWheelF.setPower(OffsetCalculation.scaled(leftY1 - leftX1 - offset - z) * scaleFactor);
+        rightWheelB.setPower(OffsetCalculation.scaled(-leftY1 - leftX1 + offset + z) * scaleFactor);
+        leftWheelB.setPower(OffsetCalculation.scaled(-leftY1 + leftX1 - offset - z) * scaleFactor);
+    }
+
+    private void Clamp () {
+        if (gamepad2.right_bumper) {
+            harvesterTL.setPosition(0.15);
+            harvesterTR.setPosition(0.85);
+        } else {
+            harvesterTL.setPosition(0.75);
+            harvesterTR.setPosition(0.25);
+        }
+
+        if (gamepad2.left_bumper) {
+            harvesterBL.setPosition(0.83);
+            harvesterBR.setPosition(0.13);
+        } else {
+            harvesterBL.setPosition(0.25);
+            harvesterBR.setPosition(0.75);
+        }
     }
 
     private void MoveF (double power) {
