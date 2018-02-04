@@ -15,6 +15,9 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+//import com.github.pmtischler.control.Mecanum;
+
+
 /**
  * Created by GCW on 2/4/2018.
  */
@@ -23,6 +26,18 @@ import com.qualcomm.robotcore.util.Range;
 public class MecanumTeleOp extends OpMode {
 
     DcMotor leftFront, leftBack, rightFront, rightBack;
+    GyroSensor gyro;
+
+    private float preDirection = 0, curDirection;
+    private double offset;
+
+    float slowMultiplier () {
+        if (gamepad1.right_bumper) {
+            return 1;
+        } else {
+            return 0.4f;
+        }
+    }
 
     @Override
     public void init() {
@@ -30,9 +45,17 @@ public class MecanumTeleOp extends OpMode {
         leftBack = hardwareMap.dcMotor.get("LB");
         rightFront = hardwareMap.dcMotor.get("RF");
         rightBack = hardwareMap.dcMotor.get("RB");
+        gyro = hardwareMap.gyroSensor.get("Gyro");
 
-        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftBack.setDirection(DcMotorSimple.Direction.REVERSE);
+        gyro.resetZAxisIntegrator();
+        gyro.calibrate();
+        while (gyro.isCalibrating()) {
+            telemetry.addData("Is Calibrating", gyro.isCalibrating());
+            telemetry.update();
+        }
+
+        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
     }
 
     @Override
@@ -42,7 +65,16 @@ public class MecanumTeleOp extends OpMode {
 
     @Override
     public void loop() {
-        Move(gamepad1.left_stick_y);
+        curDirection = gyro.getHeading();
+        offset = OffsetCalculation.offset(curDirection, preDirection);
+        if (gamepad1.a) {
+            preDirection = curDirection;
+            offset = 0;
+        }
+
+        Move();
+
+        telemetry.addData("Offset", offset);
     }
 
     @Override
@@ -53,10 +85,28 @@ public class MecanumTeleOp extends OpMode {
     public void stop() {
     }
 
-    void Move (float f) {
-        leftFront.setPower(f);
-        leftBack.setPower(f);
-        rightFront.setPower(f);
-        rightBack.setPower(f);
+    void Move () {
+        float leftY1 = gamepad1.left_stick_y;
+        float rightY1 = gamepad1.right_stick_y;
+        float z = gamepad1.left_trigger - gamepad1.right_trigger;
+
+        leftFront.setPower(OffsetCalculation.scaled((leftY1 + z) * slowMultiplier() + offset));
+        rightFront.setPower(OffsetCalculation.scaled((rightY1 + z) * slowMultiplier() - offset));
+        leftBack.setPower(OffsetCalculation.scaled((leftY1 - z) * slowMultiplier() + offset));
+        rightBack.setPower(OffsetCalculation.scaled((rightY1 - z) * slowMultiplier() - offset));
+    }
+
+    void BetterMove () {
+        // Convert joysticks to desired motion.
+        Mecanum.Motion motion = Mecanum.joystickToMotion(
+                gamepad1.left_stick_x, gamepad1.left_stick_y,
+                gamepad1.right_stick_x, gamepad1.right_stick_y);
+
+        // Convert desired motion to wheel powers, with power clamping.
+        Mecanum.Wheels wheels = Mecanum.motionToWheels(motion);
+        leftFront.setPower(wheels.frontLeft);
+        rightFront.setPower(wheels.frontRight);
+        leftBack.setPower(wheels.backLeft);
+        rightBack.setPower(wheels.backRight);
     }
 }

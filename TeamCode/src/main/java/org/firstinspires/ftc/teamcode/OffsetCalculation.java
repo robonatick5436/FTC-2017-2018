@@ -9,8 +9,12 @@ import com.qualcomm.robotcore.util.Range;
 public class OffsetCalculation {
     static double offset (float a, float b) {
         double d = 1 - Math.cos((a-b) * Math.PI / 180);
-        if (d > 0.08 || d < -0.08) {
-            return d;
+        if (d > 0.05 || d < -0.05) {
+            if (a > 180) {
+                return -d * 2;
+            } else {
+                return d * 2;
+            }
         } else {
             return 0;
         }
