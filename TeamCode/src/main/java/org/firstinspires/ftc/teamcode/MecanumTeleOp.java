@@ -15,6 +15,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
+import java.sql.Time;
+
 //import com.github.pmtischler.control.Mecanum;
 
 
@@ -30,6 +32,20 @@ public class MecanumTeleOp extends OpMode {
 
     private float preDirection = 0, curDirection;
     private double offset;
+
+    private Pid leftDrive = null;
+    private Pid rightDrive = null;
+
+    private final double ticksPerRevolution = 1000;  // Get for your motor and gearing.
+    private double prevTime;  // The last time loop() was called.
+    private int prevLeftEncoderPosition;   // Encoder tick at last call to loop().
+    private int prevRightEncoderPosition;  // Encoder tick at last call to loop().
+    private final double drivePidKp = 1;     // Tuning variable for PID.
+    private final double drivePidTi = 1.0;   // Eliminate integral error in 1 sec.
+    private final double drivePidTd = 0.1;   // Account for error in 0.1 sec.
+    // Protect against integral windup by limiting integral term.
+    private final double drivePidIntMax = 1.0;  // Limit to max speed.
+    private final double driveOutMax = 1.0;  // Motor output limited to 100%.
 
     float slowMultiplier () {
         if (gamepad1.right_bumper) {
@@ -56,6 +72,15 @@ public class MecanumTeleOp extends OpMode {
 
         rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
         rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        // ... other code
+
+        leftDrive = new Pid(drivePidKp, drivePidTi, drivePidTd,
+                -drivePidIntMax, drivePidIntMax,
+                -driveOutMax, driveOutMax);
+        rightDrive = new Pid(drivePidKp, drivePidTi, drivePidTd,
+                -drivePidIntMax, drivePidIntMax,
+                -driveOutMax, driveOutMax);
     }
 
     @Override
@@ -65,14 +90,36 @@ public class MecanumTeleOp extends OpMode {
 
     @Override
     public void loop() {
+        double left = gamepad1.left_stick_y;
+        double right = gamepad1.right_stick_y;
+        // Compute speed of left,right motors.
+        double deltaTime = time - prevTime;
+        double leftSpeed = (leftFront.getCurrentPosition() - prevLeftEncoderPosition) /
+                deltaTime;
+        double rightSpeed = (rightFront.getCurrentPosition() - prevRightEncoderPosition) /
+                deltaTime;
+        // Track last loop() values.
+        prevTime = time;
+        prevLeftEncoderPosition = leftFront.getCurrentPosition();
+        prevRightEncoderPosition = rightFront.getCurrentPosition();
+
         curDirection = gyro.getHeading();
         offset = OffsetCalculation.offset(curDirection, preDirection);
-        if (gamepad1.a) {
+        if (gamepad1.a || gamepad1.left_stick_y + gamepad1.right_stick_y != 0) {
             preDirection = curDirection;
             offset = 0;
         }
 
-        Move();
+        // Use Pid to compute motor powers to achieve wheel velocity.
+        left = leftDrive.update(1, leftSpeed, deltaTime);
+        right = rightDrive.update(1, rightSpeed, deltaTime);
+        // Clamp motor powers.
+        Vector2d motorPower = new Vector2d(left, right);
+        clampPowers(motorPower);
+        left = motorPower.getX();
+        right = motorPower.getY();
+
+        Move(left, right);
 
         telemetry.addData("Offset", offset);
     }
@@ -85,15 +132,13 @@ public class MecanumTeleOp extends OpMode {
     public void stop() {
     }
 
-    void Move () {
-        float leftY1 = gamepad1.left_stick_y;
-        float rightY1 = gamepad1.right_stick_y;
+    void Move (double l, double r) {
         float z = gamepad1.left_trigger - gamepad1.right_trigger;
 
-        leftFront.setPower(OffsetCalculation.scaled((leftY1 + z) * slowMultiplier() + offset));
-        rightFront.setPower(OffsetCalculation.scaled((rightY1 + z) * slowMultiplier() - offset));
-        leftBack.setPower(OffsetCalculation.scaled((leftY1 - z) * slowMultiplier() + offset));
-        rightBack.setPower(OffsetCalculation.scaled((rightY1 - z) * slowMultiplier() - offset));
+        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier() + offset));
+        rightFront.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier() - offset));
+        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier() + offset));
+        rightBack.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier() - offset));
     }
 
     void BetterMove () {
@@ -108,5 +153,10 @@ public class MecanumTeleOp extends OpMode {
         rightFront.setPower(wheels.frontRight);
         leftBack.setPower(wheels.backLeft);
         rightBack.setPower(wheels.backRight);
+    }
+
+    void clampPowers (Vector2d v2d) {
+        Pid.clampValue(v2d.getX(), -1, 1);
+        Pid.clampValue(v2d.getY(), -1, 1);
     }
 }
