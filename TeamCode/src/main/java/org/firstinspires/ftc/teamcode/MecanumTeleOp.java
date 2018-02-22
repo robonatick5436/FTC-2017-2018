@@ -79,7 +79,7 @@ public class MecanumTeleOp extends OpMode {
             telemetry.update();
         }
 
-        rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
         harvesterRight.setDirection(DcMotorSimple.Direction.REVERSE);
         liftRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
