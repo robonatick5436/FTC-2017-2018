@@ -27,7 +27,7 @@ import java.sql.Time;
 @TeleOp(name="Simple Driving Mode", group="Iterative Opmode")  // @Autonomous(...) is the other common choice
 public class SimpleTeleOp extends OpMode {
 
-    DcMotor leftFront, leftBack, rightFront, rightBack;
+    DcMotor leftFront, leftBack, rightFront, rightBack, harvesterLeft, harvesterRight;
     GyroSensor gyro;
 
     private float preDirection = 0, curDirection;
@@ -48,6 +48,8 @@ public class SimpleTeleOp extends OpMode {
         leftBack = hardwareMap.dcMotor.get("LB");
         rightFront = hardwareMap.dcMotor.get("RF");
         rightBack = hardwareMap.dcMotor.get("RB");
+        harvesterLeft = hardwareMap.dcMotor.get("HL");
+        harvesterRight = hardwareMap.dcMotor.get("HR");
         gyro = hardwareMap.gyroSensor.get("Gyro");
 
 //        gyro.resetZAxisIntegrator();
@@ -59,11 +61,7 @@ public class SimpleTeleOp extends OpMode {
 
         rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
         rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
-
-        rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        harvesterRight.setDirection(DcMotorSimple.Direction.REVERSE);
     }
 
     @Override
@@ -75,6 +73,9 @@ public class SimpleTeleOp extends OpMode {
     public void loop() {
         double left = gamepad1.left_stick_y;
         double right = gamepad1.right_stick_y;
+
+        harvesterLeft.setPower(gamepad2.left_stick_y);
+        harvesterRight.setPower(gamepad2.right_stick_y);
 
         Move(left, right);
     }

@@ -27,7 +27,8 @@ import java.sql.Time;
 @TeleOp(name="Mecanum Driving Mode", group="Iterative Opmode")  // @Autonomous(...) is the other common choice
 public class MecanumTeleOp extends OpMode {
 
-    DcMotor leftFront, leftBack, rightFront, rightBack;
+    DcMotor leftFront, leftBack, rightFront, rightBack, harvesterLeft, harvesterRight, liftLeft, liftRight;
+    Servo flipperUp, flipperDown, blockerLeft, blockerRight;
     GyroSensor gyro;
 
     private float preDirection = 0, curDirection;
@@ -51,7 +52,7 @@ public class MecanumTeleOp extends OpMode {
         if (gamepad1.right_bumper) {
             return 1;
         } else {
-            return 0.4f;
+            return 0.6f;
         }
     }
 
@@ -61,6 +62,14 @@ public class MecanumTeleOp extends OpMode {
         leftBack = hardwareMap.dcMotor.get("LB");
         rightFront = hardwareMap.dcMotor.get("RF");
         rightBack = hardwareMap.dcMotor.get("RB");
+        harvesterLeft = hardwareMap.dcMotor.get("HL");
+        harvesterRight = hardwareMap.dcMotor.get("HR");
+        liftLeft = hardwareMap.dcMotor.get("LL");
+        liftRight = hardwareMap.dcMotor.get("LR");
+        flipperUp = hardwareMap.servo.get("Cice");
+        flipperDown = hardwareMap.servo.get("FD");
+        blockerLeft = hardwareMap.servo.get("BL");
+        blockerRight = hardwareMap.servo.get("BR");
         gyro = hardwareMap.gyroSensor.get("Gyro");
 
         gyro.resetZAxisIntegrator();
@@ -70,8 +79,9 @@ public class MecanumTeleOp extends OpMode {
             telemetry.update();
         }
 
-        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
         rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
+        harvesterRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        liftRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
         rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -122,6 +132,33 @@ public class MecanumTeleOp extends OpMode {
 //        left = motorPower.getX();
 //        right = motorPower.getY();
 
+        harvesterLeft.setPower(gamepad2.left_stick_y * 0.5);
+        harvesterRight.setPower(gamepad2.right_stick_y * 0.5);
+
+        if (gamepad2.dpad_up) {
+            liftLeft.setPower(1);
+            liftRight.setPower(1);
+        } else if (gamepad2.dpad_down) {
+            liftLeft.setPower(-1);
+            liftRight.setPower(-1);
+        } else {
+            liftLeft.setPower(0);
+            liftRight.setPower(0);
+        }
+
+        if (gamepad2.a) {
+            blockerLeft.setPosition(1);
+            blockerRight.setPosition(0);
+            flipperUp.setPosition(0.2);
+            flipperDown.setPosition(0.8);
+        }
+        if (gamepad2.b) {
+            blockerLeft.setPosition(0.7);
+            blockerRight.setPosition(0.3);
+            flipperUp.setPosition(0.8);
+            flipperDown.setPosition(0.2);
+        }
+
         Move(left, right);
     }
 
@@ -136,14 +173,14 @@ public class MecanumTeleOp extends OpMode {
     void Move (double l, double r) {
         float z = gamepad1.left_trigger - gamepad1.right_trigger;
 
-        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier() + offset));
-        rightFront.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier() - offset));
-        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier() + offset));
-        rightBack.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier() - offset));
-//        leftFront.setPower(l);
-//        leftBack.setPower(l);
-//        rightFront.setPower(r);
-//        rightBack.setPower(r);
+//        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier() + offset));
+//        rightFront.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier() - offset));
+//        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier() + offset));
+//        rightBack.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier() - offset));
+        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier()));
+        rightFront.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier()));
+        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier()));
+        rightBack.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier()));
         telemetry.addData("Left Power", l);
         telemetry.addData("Right Power", r);
         telemetry.addData("offset", offset);
