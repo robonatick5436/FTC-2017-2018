@@ -11,9 +11,9 @@ public class OffsetCalculation {
         double d = 1 - Math.cos((a-b) * Math.PI / 180);
         if (d > 0.05 || d < -0.05) {
             if (a > 180) {
-                return -d * 2;
+                return -d * 1.5;
             } else {
-                return d * 2;
+                return d * 1.5;
             }
         } else {
             return 0;

@@ -49,8 +49,10 @@ public class MecanumTeleOp extends OpMode {
     private final double driveOutMax = 1.0;  // Motor output limited to 100%.
 
     float slowMultiplier () {
-        if (gamepad1.right_bumper) {
+        if (gamepad1.left_bumper) {
             return 1;
+        } else if (gamepad1.right_bumper) {
+            return 0.4f;
         } else {
             return 0.6f;
         }
@@ -79,9 +81,9 @@ public class MecanumTeleOp extends OpMode {
             telemetry.update();
         }
 
-        rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
         harvesterRight.setDirection(DcMotorSimple.Direction.REVERSE);
-        liftRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        liftLeft.setDirection(DcMotorSimple.Direction.REVERSE);
 
         rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -146,17 +148,17 @@ public class MecanumTeleOp extends OpMode {
             liftRight.setPower(0);
         }
 
-        if (gamepad2.a) {
+        if (gamepad2.left_bumper) {
             blockerLeft.setPosition(1);
             blockerRight.setPosition(0);
             flipperUp.setPosition(0.2);
             flipperDown.setPosition(0.8);
         }
-        if (gamepad2.b) {
+        if (gamepad2.right_bumper) {
             blockerLeft.setPosition(0.7);
             blockerRight.setPosition(0.3);
             flipperUp.setPosition(0.8);
-            flipperDown.setPosition(0.2);
+            flipperDown.setPosition(0.15);
         }
 
         Move(left, right);
@@ -173,14 +175,14 @@ public class MecanumTeleOp extends OpMode {
     void Move (double l, double r) {
         float z = gamepad1.left_trigger - gamepad1.right_trigger;
 
-//        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier() + offset));
-//        rightFront.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier() - offset));
-//        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier() + offset));
-//        rightBack.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier() - offset));
-        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier()));
-        rightFront.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier()));
-        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier()));
-        rightBack.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier()));
+        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier() + offset));
+        rightFront.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier() - offset));
+        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier() + offset));
+        rightBack.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier() - offset));
+//        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier()));
+//        rightFront.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier()));
+//        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier()));
+//        rightBack.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier()));
         telemetry.addData("Left Power", l);
         telemetry.addData("Right Power", r);
         telemetry.addData("offset", offset);
