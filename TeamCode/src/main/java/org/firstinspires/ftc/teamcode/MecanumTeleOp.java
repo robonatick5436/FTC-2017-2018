@@ -33,6 +33,7 @@ public class MecanumTeleOp extends OpMode {
 
     private float preDirection = 0, curDirection;
     private double offset;
+    private boolean flipped;
 
     private Pid leftDrive = null;
     private Pid rightDrive = null;
@@ -134,8 +135,10 @@ public class MecanumTeleOp extends OpMode {
 //        left = motorPower.getX();
 //        right = motorPower.getY();
 
-        harvesterLeft.setPower(gamepad2.left_stick_y * 0.5);
-        harvesterRight.setPower(gamepad2.right_stick_y * 0.5);
+        if (!flipped) {
+            harvesterLeft.setPower(gamepad2.left_stick_y * 0.5);
+            harvesterRight.setPower(gamepad2.right_stick_y * 0.5);
+        }
 
         if (gamepad2.dpad_up) {
             liftLeft.setPower(1);
@@ -149,12 +152,14 @@ public class MecanumTeleOp extends OpMode {
         }
 
         if (gamepad2.left_bumper) {
+            flipped = true;
             blockerLeft.setPosition(1);
             blockerRight.setPosition(0);
             flipperUp.setPosition(0.2);
             flipperDown.setPosition(0.8);
         }
         if (gamepad2.right_bumper) {
+            flipped = false;
             blockerLeft.setPosition(0.7);
             blockerRight.setPosition(0.3);
             flipperUp.setPosition(0.8);
@@ -176,9 +181,9 @@ public class MecanumTeleOp extends OpMode {
         float z = gamepad1.left_trigger - gamepad1.right_trigger;
 
         leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier() + offset));
-        rightFront.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier() - offset));
+        rightFront.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier() - offset));
         leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier() + offset));
-        rightBack.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier() - offset));
+        rightBack.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier() - offset));
 //        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier()));
 //        rightFront.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier()));
 //        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier()));
