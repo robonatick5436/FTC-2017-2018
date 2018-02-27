@@ -28,12 +28,14 @@ import java.sql.Time;
 public class MecanumTeleOp extends OpMode {
 
     DcMotor leftFront, leftBack, rightFront, rightBack, harvesterLeft, harvesterRight, liftLeft, liftRight;
-    Servo flipperUp, flipperDown, blockerLeft, blockerRight;
+    Servo flipperLeft, flipperRight, blockerLeft, blockerRight;
     GyroSensor gyro;
 
     private float preDirection = 0, curDirection;
+    private float position;
     private double offset;
     private boolean flipped;
+    private boolean is;
 
     private Pid leftDrive = null;
     private Pid rightDrive = null;
@@ -53,9 +55,9 @@ public class MecanumTeleOp extends OpMode {
         if (gamepad1.left_bumper) {
             return 1;
         } else if (gamepad1.right_bumper) {
-            return 0.4f;
+            return 0.27f;
         } else {
-            return 0.6f;
+            return 0.4f;
         }
     }
 
@@ -69,8 +71,8 @@ public class MecanumTeleOp extends OpMode {
         harvesterRight = hardwareMap.dcMotor.get("HR");
         liftLeft = hardwareMap.dcMotor.get("LL");
         liftRight = hardwareMap.dcMotor.get("LR");
-        flipperUp = hardwareMap.servo.get("Cice");
-        flipperDown = hardwareMap.servo.get("FD");
+        flipperLeft = hardwareMap.servo.get("FL");
+        flipperRight = hardwareMap.servo.get("FR");
         blockerLeft = hardwareMap.servo.get("BL");
         blockerRight = hardwareMap.servo.get("BR");
         gyro = hardwareMap.gyroSensor.get("Gyro");
@@ -97,6 +99,8 @@ public class MecanumTeleOp extends OpMode {
         rightDrive = new Pid(drivePidKp, drivePidTi, drivePidTd,
                 -drivePidIntMax, drivePidIntMax,
                 -driveOutMax, driveOutMax);
+
+
     }
 
     @Override
@@ -121,9 +125,9 @@ public class MecanumTeleOp extends OpMode {
 
         curDirection = gyro.getHeading();
         offset = OffsetCalculation.offset(curDirection, preDirection);
-        if (gamepad1.a || gamepad1.left_stick_y + gamepad1.right_stick_y != 0) {
+        if (gamepad1.right_bumper || gamepad1.left_stick_y + gamepad1.right_stick_y != 0) {
             preDirection = curDirection;
-            offset = 0;
+        offset = 0;
         }
 
 //        // Use Pid to compute motor powers to achieve wheel velocity.
@@ -132,41 +136,55 @@ public class MecanumTeleOp extends OpMode {
 //        // Clamp motor powers.
 //        Vector2d motorPower = new Vector2d(left, right);
 //        clampPowers(motorPower);
-//        left = motorPower.getX();
+//        left = motorPower.getX(); vvb
 //        right = motorPower.getY();
 
         if (!flipped) {
             harvesterLeft.setPower(gamepad2.left_stick_y * 0.5);
             harvesterRight.setPower(gamepad2.right_stick_y * 0.5);
-        }
-
-        if (gamepad2.dpad_up) {
-            liftLeft.setPower(1);
-            liftRight.setPower(1);
-        } else if (gamepad2.dpad_down) {
-            liftLeft.setPower(-1);
-            liftRight.setPower(-1);
         } else {
-            liftLeft.setPower(0);
-            liftRight.setPower(0);
+            if (gamepad2.dpad_up) {
+                liftLeft.setPower(1);
+                liftRight.setPower(1);
+            } else if (gamepad2.dpad_down) {
+                liftLeft.setPower(-1);
+                liftRight.setPower(-1);
+            } else {
+                liftLeft.setPower(0);
+                liftRight.setPower(0);
+            }
         }
 
-        if (gamepad2.left_bumper) {
+        if (gamepad2.a) {
             flipped = true;
-            blockerLeft.setPosition(1);
-            blockerRight.setPosition(0);
-            flipperUp.setPosition(0.2);
-            flipperDown.setPosition(0.8);
+            flipperLeft.setPosition(0.8);
+            flipperRight.setPosition(0.44);
+        }
+        if (gamepad2.b) {
+            flipped = true;
+            flipperLeft.setPosition(0.65);
+            flipperRight.setPosition(0.59);
+        }
+        if (gamepad2.y) {
+            flipped = false;
+            flipperLeft.setPosition(0.22);
+            flipperRight.setPosition(0.88);
+        }
+        if (gamepad2.left_bumper) {
+            blockerLeft.setPosition(0);
+            blockerRight.setPosition(1);
         }
         if (gamepad2.right_bumper) {
-            flipped = false;
-            blockerLeft.setPosition(0.7);
-            blockerRight.setPosition(0.3);
-            flipperUp.setPosition(0.8);
-            flipperDown.setPosition(0.15);
+            blockerLeft.setPosition(0.2);
+            blockerRight.setPosition(0.8);
         }
 
+
         Move(left, right);
+
+        telemetry.addData("FL", flipperLeft.getPosition());
+        telemetry.addData("FR", flipperRight.getPosition());
+        telemetry.update();
     }
 
     @Override
@@ -180,18 +198,18 @@ public class MecanumTeleOp extends OpMode {
     void Move (double l, double r) {
         float z = gamepad1.left_trigger - gamepad1.right_trigger;
 
-        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier() + offset));
-        rightFront.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier() - offset));
-        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier() + offset));
-        rightBack.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier() - offset));
+        leftFront.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier() + offset));
+        rightFront.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier() - offset));
+        leftBack.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier() + offset));
+        rightBack.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier() - offset));
 //        leftFront.setPower(OffsetCalculation.scaled((l + z) * slowMultiplier()));
 //        rightFront.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier()));
 //        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier()));
 //        rightBack.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier()));
-        telemetry.addData("Left Power", l);
-        telemetry.addData("Right Power", r);
-        telemetry.addData("offset", offset);
-        telemetry.update();
+//        telemetry.addData("Left Power", l);
+//        telemetry.addData("Right Power", r);
+//        telemetry.addData("offset", offset);
+//        telemetry.update();
     }
 
     void BetterMove () {
