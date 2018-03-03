@@ -31,6 +31,8 @@ public class MecanumTeleOp extends OpMode {
     Servo flipperLeft, flipperRight, blockerLeft, blockerRight;
     GyroSensor gyro;
 
+    private static int ticksPerRev = 1120;
+
     private float preDirection = 0, curDirection;
     private float position;
     private double offset;
@@ -52,7 +54,7 @@ public class MecanumTeleOp extends OpMode {
     private final double driveOutMax = 1.0;  // Motor output limited to 100%.
 
     float slowMultiplier () {
-        if (gamepad1.left_bumper) {
+        if (gamepad1.y) {
             return 1;
         } else if (gamepad1.right_bumper) {
             return 0.27f;
@@ -85,13 +87,23 @@ public class MecanumTeleOp extends OpMode {
         }
 
         rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
+//        rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
         harvesterRight.setDirection(DcMotorSimple.Direction.REVERSE);
         liftLeft.setDirection(DcMotorSimple.Direction.REVERSE);
 
         rightFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftFront.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        leftBack.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        liftRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        liftLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
         rightFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         leftFront.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        rightBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        leftBack.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        liftRight.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        liftLeft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         leftDrive = new Pid(drivePidKp, drivePidTi, drivePidTd,
                 -drivePidIntMax, drivePidIntMax,
@@ -99,60 +111,34 @@ public class MecanumTeleOp extends OpMode {
         rightDrive = new Pid(drivePidKp, drivePidTi, drivePidTd,
                 -drivePidIntMax, drivePidIntMax,
                 -driveOutMax, driveOutMax);
-
-
     }
 
     @Override
     public void init_loop() {
-
+        flipperLeft.setPosition(0.22);
+        flipperRight.setPosition(0.88);
+        blockerLeft.setPosition(0);
+        blockerRight.setPosition(1);
     }
 
     @Override
     public void loop() {
         double left = gamepad1.left_stick_y;
         double right = gamepad1.right_stick_y;
-//        // Compute speed of left,right motors.
-//        double deltaTime = time - prevTime;
-//        double leftSpeed = (leftFront.getCurrentPosition() - prevLeftEncoderPosition) /
-//                deltaTime;
-//        double rightSpeed = (rightFront.getCurrentPosition() - prevRightEncoderPosition) /
-//                deltaTime;
-//        // Track last loop() values.
-//        prevTime = time;
-//        prevLeftEncoderPosition = leftFront.getCurrentPosition();
-//        prevRightEncoderPosition = rightFront.getCurrentPosition();
 
         curDirection = gyro.getHeading();
         offset = OffsetCalculation.offset(curDirection, preDirection);
-        if (gamepad1.right_bumper || gamepad1.left_stick_y + gamepad1.right_stick_y != 0) {
-            preDirection = curDirection;
-        offset = 0;
-        }
 
-//        // Use Pid to compute motor powers to achieve wheel velocity.
-//        left = leftDrive.update(gamepad1.left_stick_y, leftSpeed, deltaTime);
-//        right = rightDrive.update(gamepad1.right_stick_y, rightSpeed, deltaTime);
-//        // Clamp motor powers.
-//        Vector2d motorPower = new Vector2d(left, right);
-//        clampPowers(motorPower);
-//        left = motorPower.getX(); vvb
-//        right = motorPower.getY();
+        if (gamepad1.left_bumper) {
+            preDirection = curDirection;
+            offset = 0;
+        }
 
         if (!flipped) {
             harvesterLeft.setPower(gamepad2.left_stick_y * 0.5);
             harvesterRight.setPower(gamepad2.right_stick_y * 0.5);
         } else {
-            if (gamepad2.dpad_up) {
-                liftLeft.setPower(1);
-                liftRight.setPower(1);
-            } else if (gamepad2.dpad_down) {
-                liftLeft.setPower(-1);
-                liftRight.setPower(-1);
-            } else {
-                liftLeft.setPower(0);
-                liftRight.setPower(0);
-            }
+            MoveSlide();
         }
 
         if (gamepad2.a) {
@@ -160,10 +146,10 @@ public class MecanumTeleOp extends OpMode {
             flipperLeft.setPosition(0.8);
             flipperRight.setPosition(0.44);
         }
-        if (gamepad2.b) {
+        if (gamepad2.x) {
             flipped = true;
-            flipperLeft.setPosition(0.65);
-            flipperRight.setPosition(0.59);
+            flipperLeft.setPosition(0.5);
+            flipperRight.setPosition(0.67);
         }
         if (gamepad2.y) {
             flipped = false;
@@ -182,8 +168,11 @@ public class MecanumTeleOp extends OpMode {
 
         Move(left, right);
 
-        telemetry.addData("FL", flipperLeft.getPosition());
-        telemetry.addData("FR", flipperRight.getPosition());
+        telemetry.addData("L", leftBack.getPower());
+        telemetry.addData("R", rightBack.getPower());
+        telemetry.addData("offset", offset);
+        telemetry.addData("L Pos", leftBack.getCurrentPosition());
+        telemetry.addData("R Pos", rightBack.getCurrentPosition());
         telemetry.update();
     }
 
@@ -206,10 +195,6 @@ public class MecanumTeleOp extends OpMode {
 //        rightFront.setPower(OffsetCalculation.scaled((r - z) * slowMultiplier()));
 //        leftBack.setPower(OffsetCalculation.scaled((l - z) * slowMultiplier()));
 //        rightBack.setPower(OffsetCalculation.scaled((r + z) * slowMultiplier()));
-//        telemetry.addData("Left Power", l);
-//        telemetry.addData("Right Power", r);
-//        telemetry.addData("offset", offset);
-//        telemetry.update();
     }
 
     void BetterMove () {
@@ -229,5 +214,22 @@ public class MecanumTeleOp extends OpMode {
     void clampPowers (Vector2d v2d) {
         Pid.clampValue(v2d.getX(), -1, 1);
         Pid.clampValue(v2d.getY(), -1, 1);
+    }
+
+    void MoveSlide () {
+        if (gamepad2.dpad_up) {
+            liftLeft.setPower(1);
+            liftRight.setPower(1);
+        } else if (gamepad2.dpad_down) {
+            liftLeft.setPower(-1);
+            liftRight.setPower(-1);
+        } else if (gamepad2.dpad_left) {
+            liftLeft.setPower(-1);
+        } else if (gamepad2.dpad_right) {
+            liftRight.setPower(-1);
+        } else {
+            liftLeft.setPower(0);
+            liftRight.setPower(0);
+        }
     }
 }

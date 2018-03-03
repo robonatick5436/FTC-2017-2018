@@ -23,131 +23,65 @@ import com.qualcomm.robotcore.util.Range;
 @Autonomous(name="Test Autonomous", group = "Iterative Opmode")
 public class TestAutonomous extends LinearOpMode {
 
-    private DcMotor leftWheelF, leftWheelB, rightWheelF, rightWheelB, rackMotor;
-    private ColorSensor armColor;
-    private Servo arm, harvesterTL, harvesterTR, harvesterBL, harvesterBR;
-    private GyroSensor gyro;
-    private ModernRoboticsI2cRangeSensor disSensor;
-
-
-    private boolean Red () {
-        if (armColor.red() > armColor.blue()) {
-            return true;
-        } else {
-            return  false;
-        }
-    }
+    private DcMotor leftBack, leftFront, rightFront, rightBack;
+    private Servo flipperLeft, flipperRight, blockerLeft, blockerRight;
 
     @Override
     public void runOpMode() {
-        leftWheelF = hardwareMap.dcMotor.get("LWF");
-        leftWheelB = hardwareMap.dcMotor.get("LWB");
-        rightWheelF = hardwareMap.dcMotor.get("RWF");
-        rightWheelB = hardwareMap.dcMotor.get("RWB");
-        rackMotor = hardwareMap.dcMotor.get("RM");
+        leftFront = hardwareMap.dcMotor.get("LF");
+        leftBack = hardwareMap.dcMotor.get("LB");
+        rightFront = hardwareMap.dcMotor.get("RF");
+        rightBack = hardwareMap.dcMotor.get("RB");
+        flipperLeft = hardwareMap.servo.get("FL");
+        flipperRight = hardwareMap.servo.get("FR");
+        blockerLeft = hardwareMap.servo.get("BL");
+        blockerRight = hardwareMap.servo.get("BR");
 
-        arm = hardwareMap.servo.get("arm");
-        harvesterTL = hardwareMap.servo.get("TL");
-        harvesterTR = hardwareMap.servo.get("TR");
-        harvesterBL = hardwareMap.servo.get("BL");
-        harvesterBR = hardwareMap.servo.get("BR");
-
-//        gyro = hardwareMap.gyroSensor.get("Gyro");
-        armColor = hardwareMap.colorSensor.get("AC");
-        armColor.setI2cAddress(I2cAddr.create8bit(0x4c));
-
-        rightWheelF.setDirection(DcMotorSimple.Direction.REVERSE);
-        rightWheelB.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
+        rightBack.setDirection(DcMotorSimple.Direction.REVERSE);
 
         waitForStart();
 
-        harvesterTL.setPosition(0.75);
-        harvesterTR.setPosition(0.25);
-        harvesterBL.setPosition(0.25);
-        harvesterBR.setPosition(0.75);
+        blockerLeft.setPosition(0);
+        blockerRight.setPosition(1);
+        MoveF(0.5, 0);
+        sleep(1400);
+        Stop();
         sleep(500);
-        harvesterTL.setPosition(0.15);
-        harvesterTR.setPosition(0.85);
+        flipperLeft.setPosition(0.8);
+        flipperRight.setPosition(0.44);
+        sleep(1000);
+        flipperLeft.setPosition(0.22);
+        flipperRight.setPosition(0.88);
+        rightBack.setDirection(DcMotorSimple.Direction.FORWARD);
         sleep(500);
-        rackMotor.setPower(-0.5);
-        sleep(300);
-
-        MoveF(0.9, 0);
-        sleep(1500);
+        MoveF(0.5, 0);
+        sleep(400);
+        Stop();
+        sleep(500);
+        MoveF(-0.4, 0);
+        sleep(250);
         Stop();
     }
 
     private void MoveF (double power, double error) {
-        rightWheelF.setPower(OffsetCalculation.scaled(power + error));
-        leftWheelF.setPower(OffsetCalculation.scaled(power - error));
-        rightWheelB.setPower(OffsetCalculation.scaled(-power + error));
-        leftWheelB.setPower(OffsetCalculation.scaled(-power - error));
-    }
-
-    private void MoveS (double power) {
-        leftWheelF.setPower(-power);
-        rightWheelF.setPower(power);
-        leftWheelB.setPower(power);
-        rightWheelB.setPower(-power);
+        rightFront.setPower(OffsetCalculation.scaled(power + error));
+        leftFront.setPower(OffsetCalculation.scaled(power - error));
+        rightBack.setPower(OffsetCalculation.scaled(power + error));
+        leftBack.setPower(OffsetCalculation.scaled(power - error));
     }
 
     private void Stop () {
-        leftWheelF.setPower(0);
-        rightWheelF.setPower(0);
-        leftWheelB.setPower(0);
-        rightWheelB.setPower(0);
+        leftFront.setPower(0);
+        rightFront.setPower(0);
+        leftBack.setPower(0);
+        rightBack.setPower(0);
     }
 
     private void Rotate (double power) {
-        leftWheelF.setPower(power);
-        rightWheelF.setPower(-power);
-        leftWheelB.setPower(power);
-        rightWheelB.setPower(-power);
-    }
-
-    private void Move (int target, double power, int desiredDirect) {
-        int distance = disSensor.rawUltrasonic();
-        while (Math.abs(distance - target) > 1) {
-            distance = disSensor.rawUltrasonic();
-            telemetry.addData("distance", distance);
-            telemetry.update();
-            double realPower;
-
-            if (distance < target * 2) {
-                realPower = power / 2;
-            } else {
-                realPower = power;
-            }
-            if (distance > target) {
-                MoveF(realPower, 0);
-            }
-            if (distance < target) {
-                MoveF(-realPower, 0);
-            }
-            Stop();
-        }
-    }
-
-    private void Turn (int target, double power) {
-        int zAccumulated = gyro.getHeading();
-        if (target > 180) {
-            Rotate(0.2);
-            sleep(400);
-        } else {
-            Rotate(-0.2);
-            sleep(400);
-        }
-        while (Math.abs(zAccumulated - target) > 1) {
-            zAccumulated = gyro.getHeading();
-            telemetry.addData("heading", zAccumulated);
-            telemetry.update();
-            if (zAccumulated < target) {
-                Rotate(power);
-            }
-            if (zAccumulated > target) {
-                Rotate(-power);
-            }
-        }
-        Stop();
+        leftFront.setPower(power);
+        rightFront.setPower(-power);
+        leftBack.setPower(power);
+        rightBack.setPower(-power);
     }
 }
