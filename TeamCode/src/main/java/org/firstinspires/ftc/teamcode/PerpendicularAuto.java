@@ -18,10 +18,10 @@ import com.qualcomm.robotcore.hardware.UltrasonicSensor;
 import com.qualcomm.robotcore.util.Range;
 
 /**
- * Created by GCW on 12/14/2017.
+ * Created by GCW on 3/3/2018.
  */
-@Autonomous(name="Blue Parallel Autonomous", group = "Iterative Opmode")
-public class BlueAutonomous extends LinearOpMode {
+@Autonomous(name="Perpendicular Autonomous", group = "Iterative Opmode")
+public class PerpendicularAuto extends LinearOpMode {
 
     private DcMotor leftBack, leftFront, rightFront, rightBack;
     private Servo flipperLeft, flipperRight, blockerLeft, blockerRight;
@@ -44,23 +44,21 @@ public class BlueAutonomous extends LinearOpMode {
         blockerLeft.setPosition(0);
         blockerRight.setPosition(1);
         MoveF(0.5, 0);
-        sleep(1000);
+        sleep(1400);
         Stop();
         sleep(500);
-        Rotate(0.6);
-        sleep(1200);
-        Stop();
         flipperLeft.setPosition(0.8);
         flipperRight.setPosition(0.44);
         sleep(1000);
         flipperLeft.setPosition(0.22);
         flipperRight.setPosition(0.88);
+        rightBack.setDirection(DcMotorSimple.Direction.FORWARD);
         sleep(500);
         MoveF(0.5, 0);
-        sleep(300);
+        sleep(400);
         Stop();
         sleep(500);
-        MoveF(-0.5, 0);
+        MoveF(-0.4, 0);
         sleep(250);
         Stop();
     }

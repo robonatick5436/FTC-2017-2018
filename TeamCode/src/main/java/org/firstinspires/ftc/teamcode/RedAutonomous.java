@@ -36,30 +36,31 @@ public class RedAutonomous extends LinearOpMode {
         blockerLeft = hardwareMap.servo.get("BL");
         blockerRight = hardwareMap.servo.get("BR");
 
-        leftFront.setDirection(DcMotorSimple.Direction.REVERSE);
-        leftBack.setDirection(DcMotorSimple.Direction.REVERSE);
-
+        rightFront.setDirection(DcMotorSimple.Direction.REVERSE);
         waitForStart();
 
         blockerLeft.setPosition(0);
         blockerRight.setPosition(1);
         MoveF(0.5, 0);
-        sleep(1400);
+        sleep(1000);
         Stop();
         sleep(500);
+        Rotate(-0.6);
+        sleep(1200);
+        Stop();
+        sleep(1000);
         flipperLeft.setPosition(0.8);
         flipperRight.setPosition(0.44);
         sleep(1000);
         flipperLeft.setPosition(0.22);
         flipperRight.setPosition(0.88);
-        leftBack.setDirection(DcMotorSimple.Direction.FORWARD);
         sleep(500);
         MoveF(0.5, 0);
         sleep(400);
         Stop();
         sleep(500);
         MoveF(-0.4, 0);
-        sleep(250);
+        sleep(400);
         Stop();
     }
 
